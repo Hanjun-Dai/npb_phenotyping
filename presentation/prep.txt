@@ -1,0 +1,3 @@
+Here is another experiment. In this experiment, we want to visually demonstrate our algorithm. We present the image Lina in the gray scale. So we can simply treat this image as a probablistic matrix. We run our algorithm to do factorization, and here are the reconstructed results. We can see the algorithm can approximately recover the image. 
+
+There are still some works to do for the project. Currently we have implemented the code in Matlab, and we need to deploy it in Spark platform. In the future, we want to use other efficient algorithms like stochastic variational inference to speed up the algorithm. We are also interested in using asynchronized stochastic gradient descent method to handle extreme large data in distributed fashion. 

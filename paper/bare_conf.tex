@@ -346,43 +346,16 @@
 
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
-
+\usepackage{amsmath}
+\usepackage{amssymb}
+\newcommand\Tau{\mathcal{T}}
 
 \begin{document}
 %
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
-\title{Bare Demo of IEEEtran.cls for Conferences}
+\title{Phenotyping via Bayesian Nonparametric Tensor Factorization}
 
-
-% author names and affiliations
-% use a multiple column layout for up to three different
-% affiliations
-\author{\IEEEauthorblockN{Michael Shell}
-\IEEEauthorblockA{School of Electrical and\\Computer Engineering\\
-Georgia Institute of Technology\\
-Atlanta, Georgia 30332--0250\\
-Email: http://www.michaelshell.org/contact.html}
-\and
-\IEEEauthorblockN{Homer Simpson}
-\IEEEauthorblockA{Twentieth Century Fox\\
-Springfield, USA\\
-Email: homer@thesimpsons.com}
-\and
-\IEEEauthorblockN{James Kirk\\ and Montgomery Scott}
-\IEEEauthorblockA{Starfleet Academy\\
-San Francisco, California 96678-2391\\
-Telephone: (800) 555--1212\\
-Fax: (888) 555--1212}}
-
-% conference papers do not typically use \thanks and this command
-% is locked out in conference mode. If really needed, such as for
-% the acknowledgment of grants, issue a \IEEEoverridecommandlockouts
-% after \documentclass
-
-% for over three affiliations, or if they all won't fit within the width
-% of the page, use this alternative format:
-% 
 %\author{\IEEEauthorblockN{Michael Shell\IEEEauthorrefmark{1},
 %Homer Simpson\IEEEauthorrefmark{2},
 %James Kirk\IEEEauthorrefmark{3}, 
@@ -412,7 +385,8 @@ Fax: (888) 555--1212}}
 
 \begin{abstract}
 %\boldmath
-The abstract goes here.
+We do phenotyping. 
+
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
@@ -422,9 +396,6 @@ The abstract goes here.
 % math in the abstract anyway.
 
 % no keywords
-
-
-
 
 % For peer review papers, you can put extra information on the cover
 % page as needed:
@@ -437,27 +408,95 @@ The abstract goes here.
 \IEEEpeerreviewmaketitle
 
 
-
 \section{Introduction}
-% no \IEEEPARstart
-This demo file is intended to serve as a ``starter file''
-for IEEE conference papers produced under \LaTeX\ using
-IEEEtran.cls version 1.7 and later.
-% You must have at least 2 lines in the paragraph with the drop letter
-% (should never be an issue)
-I wish you the best of success.
 
-\hfill mds
- 
-\hfill January 11, 2007
+\section{Model}
 
-\subsection{Subsection Heading Here}
-Subsection text here.
+\subsection{CANDECOMP/PARAFAC (CP) Tensor Factorization}
 
 
-\subsubsection{Subsubsection Heading Here}
-Subsubsection text here.
 
+\subsection{Dirichlet Process Tensor Factorization}
+
+\begin{table}[h]
+%% increase table row spacing, adjust to taste
+%\renewcommand{\arraystretch}{1.3}
+\caption{Data Parameters}
+\label{data_param}
+\centering
+\begin{tabular}{|c||c|}
+\hline
+Notation & Meaning\\
+\hline
+\textbf{$\lambda$} & The weight vector of phenotypes, here $\|\lambda\| = 1$\\
+\hline
+$\lambda_k$ & The weight of $k$-th phenotype; $\lambda_k \in [0, 1]$ \\
+\hline
+$N_p$ & Number of patients \\
+\hline
+$N_m$ & Number of medications \\
+\hline
+$N_d$ & Number of diagnosis \\
+\hline 
+$T$ & Record Tensor. $T \in \{0, 1\}^{N_p \times N_m \times N_d}$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+%% increase table row spacing, adjust to taste
+%\renewcommand{\arraystretch}{1.3}
+\caption{Model Parameters}
+\label{model_param}
+\centering
+\begin{tabular}{|c||c|}
+\hline
+Notation & Meaning\\
+\hline
+$\alpha$ & The hyper parameter of Beta Distribution \\
+\hline
+$\beta_i$ & The stick-breaking process random variable. $\beta_i \sim Beta(1, \alpha)$ \\
+\hline
+$\gamma_p$ & The hyper parameter of prior Dirichlet Distribution of patient \\
+\hline
+$\gamma_m$ & The hyper parameter of prior Dirichlet Distribution of medication \\
+\hline
+$\gamma_d$ & The hyper parameter of prior Dirichlet Distribution of diagnosis \\
+\hline
+$\theta^{(p, k)}$ & The multinomial distribution over patients given the phenotype $k$ \\
+\hline
+$\theta^{(m, k)}$ & The multinomial distribution over medications given the phenotype $k$ \\
+\hline
+$\theta^{(d, k)}$ & The multinomial distribution over diagnosis given the phenotype $k$ \\
+\hline
+\end{tabular}
+\end{table}
+
+We place a stick-breaking process prior on the \textbf{$\lambda$}. The parametere $\beta_i$ follows the Beta Distribution $\beta_i \sim Beta(1, \alpha), i = 1, 2, \ldots$. And:
+\[
+	\lambda_k = \beta_k \prod_{i=1}^{k-1} (1 - \beta_i), k = 1, 2, \ldots
+\]
+A $k-$dimensional Dirichlet random variable $\theta$ can take values in the $(k-1)$-simplex where $\sum_{i=1}^k \theta_i = 1$, and the probability density is 
+\[
+	p(\theta | \gamma) = \frac{\Tau (\sum_{i=1}^k \gamma_i)}{￼\prod_{i=1}^k \Tau(\gamma_i)} \theta_1^{\gamma_1 - 1}\ldots \theta_k^{\gamma_k - 1}
+\]
+It is natural to place the conjugate prior (Dirichlet Distribution) over the multinomial distributions parameterized by $\theta^{(p)}, \theta^{(m)}$ and $\theta^{(d)}$:
+\begin{align*}
+	\theta^{(p, k)} \sim & Dir(\gamma_p), k = 1, 2, \ldots \\
+	\theta^{(m, k)} \sim & Dir(\gamma_m), k = 1, 2, \ldots \\
+	\theta^{(d, k)} \sim & Dir(\gamma_d), k = 1, 2, \ldots \\
+\end{align*}
+The patients, medications and diagnosis all follow the multinomial distribution parameterised by $\theta$, specifically:
+\begin{align*}
+	\text{patient}_i \sim & Multi(\theta^{(p)}), i = 1, 2, \ldots, N_p \\
+	\text{medication}_i \sim & Multi(\theta^{(m)}), i = 1, 2, \ldots, N_m \\
+	\text{diagnosis}_i \sim & Multi(\theta^{(d)}), i = 1, 2, \ldots, N_d \\
+\end{align*}
+
+Given the parameters, the likelihood of given record triplet $(i, j, k)$ (patient $i$ had diagnostic record $k$, and has taken medicine $j$) can be formulated as:
+\[
+	p(T_{i, j, k} | \alpha, \gamma_p, \gamma_m, \gamma_d) = \sum_{r=1}^{\infty} \lambda_r p(i | r, \gamma_p)p(j | r, \gamma_m)p(k | r, \gamma_d)
+\]
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
@@ -541,40 +580,14 @@ Subsubsection text here.
 % footnotes above bottom floats. This can be corrected via the \fnbelowfloat
 % command of the stfloats package.
 
+\section{Experiments}
 
 
 \section{Conclusion}
-The conclusion goes here.
 
-
-
-
-% conference papers do not normally have an appendix
-
-
-% use section* for acknowledgement
 \section*{Acknowledgment}
 
 
-The authors would like to thank...
-
-
-
-
-
-% trigger a \newpage just before the given reference
-% number - used to balance the columns on the last page
-% adjust value as needed - may need to be readjusted if
-% the document is modified later
-%\IEEEtriggeratref{8}
-% The "triggered" command can be changed if desired:
-%\IEEEtriggercmd{\enlargethispage{-5in}}
-
-% references section
-
-% can use a bibliography generated by BibTeX as a .bbl file
-% BibTeX documentation can be easily obtained at:
-% http://www.ctan.org/tex-archive/biblio/bibtex/contrib/doc/
 % The IEEEtran BibTeX style support page is at:
 % http://www.michaelshell.org/tex/ieeetran/bibtex/
 %\bibliographystyle{IEEEtran}
@@ -593,9 +606,6 @@ H.~Kopka and P.~W. Daly, \emph{A Guide to \LaTeX}, 3rd~ed.\hskip 1em plus
 \end{thebibliography}
 
 
-
-
-% that's all folks
 \end{document}
 
 
