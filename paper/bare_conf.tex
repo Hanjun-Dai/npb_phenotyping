@@ -170,7 +170,7 @@
 
 % *** MATH PACKAGES ***
 %
-%\usepackage[cmex10]{amsmath}
+
 % A popular package from the American Mathematical Society that provides
 % many useful and powerful commands for dealing with mathematics. If using
 % it, be sure to load this package with the cmex10 option to ensure that
@@ -181,7 +181,7 @@
 %
 % Also, note that the amsmath package sets \interdisplaylinepenalty to 10000
 % thus preventing page breaks from occurring within multiline equations. Use:
-%\interdisplaylinepenalty=2500
+
 % after loading amsmath to restore such page breaks as IEEEtran.cls normally
 % does. amsmath.sty is already installed on most LaTeX systems. The latest
 % version and documentation can be obtained at:
@@ -320,33 +320,13 @@
 % not format its papers in such ways.
 
 
-
-
-
-% *** PDF, URL AND HYPERLINK PACKAGES ***
-%
-%\usepackage{url}
-% url.sty was written by Donald Arseneau. It provides better support for
-% handling and breaking URLs. url.sty is already installed on most LaTeX
-% systems. The latest version can be obtained at:
-% http://www.ctan.org/tex-archive/macros/latex/contrib/misc/
-% Read the url.sty source comments for usage information. Basically,
-% \url{my_url_here}.
-
-
-
-
-
-% *** Do not adjust lengths that control margins, column widths, etc. ***
-% *** Do not use packages that alter fonts (such as pslatex).         ***
-% There should be no need to do such things with IEEEtran.cls V1.6 and later.
-% (Unless specifically asked to do so by the journal or conference you plan
-% to submit to, of course. )
-
-
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
-\usepackage{amsmath}
+
+
+\usepackage{url}
+\usepackage[cmex10]{amsmath}
+\interdisplaylinepenalty=2500
 \usepackage{amssymb}
 \newcommand\Tau{\mathcal{T}}
 
@@ -412,9 +392,13 @@ We do phenotyping.
 
 \section{Model}
 
-\subsection{CANDECOMP/PARAFAC (CP) Tensor Factorization}
+\subsection{CANDECOMP/PARAFAC (CP) Tensor Decomposition}
 
-
+A tensor $T \in R^{n_1 \times n_2 \times \ldots \times n_d}$ can be decomposed by a linear combination of rank-$1$ tensors:
+\[
+	T = \sum_{i=1}^r \lambda_i a_i^1 \otimes a_i^2 \ldots a_i^d
+\]
+Where $\lambda_i \in R, a_i^k \in R^{n_k}$ and $\otimes$ represents the outer product. The $r$ is the rank of tensor when $r$ is minimized in above equation. When $r$ is nor minimal, then the above decomposition is referred to as CANDECOMP/PARAFAC decomposition. 
 
 \subsection{Dirichlet Process Tensor Factorization}
 
