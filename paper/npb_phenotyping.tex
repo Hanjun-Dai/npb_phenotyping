@@ -193,7 +193,7 @@
 
 % *** SPECIALIZED LIST PACKAGES ***
 %
-%\usepackage{algorithmic}
+\usepackage{algorithmic}
 % algorithmic.sty was written by Peter Williams and Rogerio Brito.
 % This package provides an algorithmic environment fo describing algorithms.
 % You can use the algorithmic environment in-text or within a figure
@@ -423,6 +423,7 @@ $N_m$ & Number of medications \\
 $N_d$ & Number of diagnosis \\
 \hline 
 $T$ & Record Tensor. $T \in \{0, 1\}^{N_p \times N_m \times N_d}$ \\
+$N$ & Number of Non-zero elements in tensor $T$ \\
 \hline
 \end{tabular}
 \end{table}
@@ -441,11 +442,11 @@ $\alpha$ & The hyper parameter of Beta Distribution \\
 \hline
 $\beta_i$ & The stick-breaking process random variable. $\beta_i \sim Beta(1, \alpha)$ \\
 \hline
-$\gamma_p$ & The hyper parameter of prior Dirichlet Distribution of patient \\
+$\gamma^{(p)}$ & The hyper parameter of prior Dirichlet Distribution of patient \\
 \hline
-$\gamma_m$ & The hyper parameter of prior Dirichlet Distribution of medication \\
+$\gamma^{(m)}$ & The hyper parameter of prior Dirichlet Distribution of medication \\
 \hline
-$\gamma_d$ & The hyper parameter of prior Dirichlet Distribution of diagnosis \\
+$\gamma^{(d)}$ & The hyper parameter of prior Dirichlet Distribution of diagnosis \\
 \hline
 $\theta^{(p, k)}$ & The multinomial distribution over patients given the phenotype $k$ \\
 \hline
@@ -466,9 +467,9 @@ A $k-$dimensional Dirichlet random variable $\theta$ can take values in the $(k-
 \]
 It is natural to place the conjugate prior (Dirichlet Distribution) over the multinomial distributions parameterized by $\theta^{(p)}, \theta^{(m)}$ and $\theta^{(d)}$:
 \begin{align*}
-	\theta^{(p, k)} \sim & Dir(\gamma_p), k = 1, 2, \ldots \\
-	\theta^{(m, k)} \sim & Dir(\gamma_m), k = 1, 2, \ldots \\
-	\theta^{(d, k)} \sim & Dir(\gamma_d), k = 1, 2, \ldots \\
+	\theta^{(p, k)} \sim & Dir(\gamma^{(p)}), k = 1, 2, \ldots \\
+	\theta^{(m, k)} \sim & Dir(\gamma^{(m)}), k = 1, 2, \ldots \\
+	\theta^{(d, k)} \sim & Dir(\gamma^{(d)}), k = 1, 2, \ldots \\
 \end{align*}
 The patients, medications and diagnosis all follow the multinomial distribution parameterised by $\theta$, specifically:
 \begin{align*}
@@ -478,9 +479,108 @@ The patients, medications and diagnosis all follow the multinomial distribution 
 \end{align*}
 
 Given the parameters, the likelihood of given record triplet $(i, j, k)$ (patient $i$ had diagnostic record $k$, and has taken medicine $j$) can be formulated as:
-\[
-	p(T_{i, j, k} | \alpha, \gamma_p, \gamma_m, \gamma_d) = \sum_{r=1}^{\infty} \lambda_r p(i | r, \gamma_p)p(j | r, \gamma_m)p(k | r, \gamma_d)
-\]
+	\begin{align*}
+& p(T_{i, j, k} | \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)}) \\
+=& \int p(\beta | \alpha) \sum_{r=1}^{\infty} \lambda_r 
+p(i | r, \gamma^{(p)})p(j | r, \gamma^{(m)})p(k | r, \gamma^{(d)}) d\beta
+	\end{align*}
+
+\subsection{Collapsed Gibbs Sampling}
+
+We define a set $S = \{(p_n, m_n, d_n)\}, n = 1, \ldots, N$, where $T(p_n, m_n, d_n) = 1$, consists of triplets representing the coordinates of non-zero elements in tensor $T$. Our model is a type of mixture model, so it is natural to define a hidden variable $z_n, n = 1, \ldots, N$ which representing the mixture index (i.e., the index of phenotype) of record triplet $(p_n, m_n, d_n)$. $z$ is a vector of length $N$ and $z_t$ represents its $t$th element. 
+
+Directly find the MAP of above equation is intractable, so we consider using MCMC to sample the parameters from posterior distribution. Here we use Gibbs sampling technique, then we need the posterior probability of a certain hidden variable $z_t$, $p(z_t | z_{-t}, S, \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)})$. Here $z_{-t}$ means the hidden variable set without $t$th element.  
+
+Let's consider a simpler case, when the number if phenotypes is $R$, a finite number. Then $\lambda \sim Dir(\frac{\alpha}{R})$. 
+Use definition of conditional probability, 
+\begin{align*}
+	p(z_t | z_{-t}, S, \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)}) = & 
+	\frac{p(z_t, z_{-t}, S | \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)})}{￼p(z_{-t}, S | \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)})} \\
+	\propto & p(z_t , z_{-t}, S | \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)}) \\
+	= & p(z, S | \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)})
+\end{align*}
+Expand it using rule of total probability, 
+\begin{align*}
+ = & \int \int \int \int p(z, S, \lambda | \theta^{(p)}, \theta^{(m)}, \theta^{(d)}) d\lambda d\theta^{(p)} d\theta^{(m)} d\theta^{(d)} \\
+ = & \int \int \int \int p(z | \lambda) p(\lambda | \alpha) p(S | \theta^{(p)}, \theta^{(m)}, \theta^{(d)}, z) \\
+  & p(\theta^{(p)} | \gamma^{(p)}) p(\theta^{(m)} | \gamma^{(m)}) p(\theta^{(d)} | \gamma^{(d)}) d\lambda d\theta^{(p)} d\theta^{(m)} d\theta^{(d)} \\
+ = & \int p(z | \lambda) p(\lambda | \alpha) d\lambda \times 
+  \int \int \int \prod_{n=1}^N p(S_n | \theta^{(p)}, \theta^{(m)}, \theta^{(d)}, z) \\
+ & p(\theta^{(p)} | \gamma^{(p)}) p(\theta^{(m)} | \gamma^{(m)}) p(\theta^{(d)} | \gamma^{(d)}) d\lambda d\theta^{(p)} d\theta^{(m)} d\theta^{(d)} \\
+\end{align*}
+We use a indicator function $I(\cdot): Bool \rightarrow \{0, 1\}$. It returns 1 iff the statement is true. Then we can further expand the above term:
+\begin{align*}
+= & \int p(z | \lambda) p(\lambda | \alpha) d\lambda \times \prod_{r=1}^R \int \int \int \\
+ & \prod_{n=1}^N p(S_n | \theta^{(p, r)}, \theta^{(m, r)}, \theta^{(d, r)})^{I(z_n = r)} \\
+ & p(\theta^{(p)} | \gamma^{(p)}) p(\theta^{(m)} | \gamma^{(m)}) p(\theta^{(d)} | \gamma^{(d)}) d\lambda d\theta^{(p)} d\theta^{(m)} d\theta^{(d)} \\
+\end{align*} 
+Define a count operation $C_{r, *, *, *}$ which represents the number of all the records in $S$ whose phenotype index is $r$. We can further define $C_{r, i, *, *}$ to represents the number of all the records in $S$ whose phenotype index is $r$ and the patient id is $i$. Similarly we have $C_{r, *, j, *}$ and $C_{r, *, *, k}$. Then:
+\begin{align*}
+= & \int p(\lambda | \alpha) \prod_{r=1}^R \lambda_r^{C_{r, *, *, *}} d\lambda \\ 
+& \times \prod_{r=1}^R \int p(\theta^{(p, r)} | \gamma^{(p)}) \prod_{i=1}^{N_p} (\theta_i^{(p, r)})^{C_{r, i, *, *}} d\theta^{(p, r)} \\
+& \times \prod_{r=1}^R \int p(\theta^{(m, r)} | \gamma^{(m)}) \prod_{j=1}^{N_m} (\theta_i^{(m, r)})^{C_{r, *, j, *}} d\theta^{(m, r)} \\
+& \times \prod_{r=1}^R \int p(\theta^{(d, r)} | \gamma^{(d)}) \prod_{k=1}^{N_d} (\theta_i^{(d, r)})^{C_{r, *, *, k}} d\theta^{(d, r)} 
+\end{align*}
+Plugin the Dirichlet prior, the first term can be further simplified as:
+\begin{align*}
+& \int \frac{\Tau(\alpha)}{￼\prod_{r=1}^R\Tau(\frac{\alpha}{R})} \prod_{r=1}^R \lambda_r^{\frac{\alpha}{R} - 1} \prod_{r=1}^R \lambda_r^{C_{r, *, *, *}}
+ d\lambda  \\
+= & \frac{\Tau(\alpha)}{\prod_{r=1}^R\Tau(\frac{\alpha}{R})} \int \prod_{r=1}^R \lambda_r^{C_{r, *, *, *} + \frac{\alpha}{R} - 1} d\lambda \\
+= & \frac{\Tau(\alpha)}{\prod_{r=1}^R\Tau(\frac{\alpha}{R})} \frac{\prod_{r=1}^R\Tau(C_{r, *, *, *} + \frac{\alpha}{R})}{\Tau(N + \alpha)} \\
+ & \int \frac{\Tau(N + \alpha)}{\prod_{r=1}^R\Tau(C_{r, *, *, *} + \frac{\alpha}{R})} \prod_{r=1}^R \lambda_r^{C_{r, *, *, *} + \frac{\alpha}{R} - 1} d\lambda \\
+= & \frac{\Tau(\alpha)}{\prod_{r=1}^R\Tau(\frac{\alpha}{R})} \frac{\prod_{r=1}^R\Tau(C_{r, *, *, *} + \frac{\alpha}{R})}{\Tau(N + \alpha)} \\
+\propto & \frac{\prod_{r=1}^R\Tau(C_{r, *, *, *} + \frac{\alpha}{R})}{\Tau(N + \alpha)} \\
+= & \frac{\Tau(C_{z_t, *, *, *}^{-t} + \frac{\alpha}{R} + 1) \times \prod_{r \neq z_t} \Tau (C_{r, *, *, *} + \frac{\alpha}{R})}{\Tau(N + \alpha)} \\
+= & (C_{z_t, *, *, *}^{-t} + \frac{\alpha}{R})\frac{\Tau(C_{z_t, *, *, *}^{-n} + \frac{\alpha}{R}) \times \prod_{r \neq z_t} \Tau (C_{r, *, *, *} + \frac{\alpha}{R})}{\Tau(N + \alpha)} \\
+\propto & C_{z_t, *, *, *}^{-t} + \frac{\alpha}{R}
+\end{align*}
+We use $\Tau(x + 1) = x \Tau(x)$ here. $C_{z_t, *, *, *}^{-t}$ means the counting result without the $t$-th record. So $C_{z_t, *, *, *}^{-t} + 1$ equals to $C_{z_t, *, *, *}$. Similarly, we can simplify the second, third and fourth term, using the above tricks:
+\begin{align*}
+&	\prod_{r=1}^R \int p(\theta^{(p, r)} | \gamma^{(p)}) \prod_{i=1}^{N_p} (\theta_i^{(p, r)})^{C_{r, i, *, *}} d\theta^{(p, r)} \\
+\propto & \frac{C_{z_t, p_t, *, *}^{-t} + \gamma_{p_t}^{(p)}}{￼\sum_{i=1}^{N_p}C_{z_t, i, *, *}^{-t} + \gamma_{i}^{(p)}} \text{ ,}\\
+&	\prod_{r=1}^R \int p(\theta^{(m, r)} | \gamma^{(m)}) \prod_{j=1}^{N_m} (\theta_i^{(m, r)})^{C_{r, *, j, *}} d\theta^{(m, r)} \\
+\propto & \frac{C_{z_t, *, m_t, *}^{-t} + \gamma_{m_t}^{(m)}}{\sum_{j=1}^{N_m}C_{z_t, *, j, *}^{-t} + \gamma_{j}^{(m)}} \text{ and}\\
+&	\prod_{r=1}^R \int p(\theta^{(d, r)} | \gamma^{(d)}) \prod_{k=1}^{N_d} (\theta_i^{(d, r)})^{C_{r, *, *, k}} d\theta^{(d, r)} \\
+\propto & \frac{C_{z_t, *, *, d_t}^{-t} + \gamma_{d_t}^{(d)}}{\sum_{k=1}^{N_d}C_{z_t, *, *, k}^{-t} + \gamma_{k}^{(d)}}
+\end{align*}
+So 
+\begin{align*}
+&  	p(z_t | z_{-t}, S, \alpha, \gamma^{(p)}, \gamma^{(m)}, \gamma^{(d)}) \\
+\propto & (C_{z_t, *, *, *}^{-t} + \frac{\alpha}{R})
+\times \frac{C_{z_t, p_t, *, *}^{-t} + \gamma_{p_t}^{(p)}}{\sum_{i=1}^{N_p}C_{z_t, i, *, *}^{-t} + \gamma_{i}^{(p)}} \\
+& \times \frac{C_{z_t, *, m_t, *}^{-t} + \gamma_{m_t}^{(m)}}{\sum_{j=1}^{N_m}C_{z_t, *, j, *}^{-t} + \gamma_{j}^{(m)}} 
+\times \frac{C_{z_t, *, *, d_t}^{-t} + \gamma_{d_t}^{(d)}}{\sum_{k=1}^{N_d}C_{z_t, *, *, k}^{-t} + \gamma_{k}^{(d)}}
+\end{align*}
+
+Since $\sum_{r=1}^{\infty} C_{z_t, *, *, *}^{-t} + \frac{\alpha}{R} = N + \alpha - 1$, when $R \rightarrow \infty$, the weight of existing mixture is $\frac{C_{z_t, *, *, *}^{-t}}{N + \alpha - 1}$, and the weight of new mixture is $\frac{\alpha}{N + \alpha - 1}$. 
+
+\section{Algorithm}
+
+\subsection{Single thread Gibbs sampling}
+
+Now since we have the marginal posterior probability, we can run Gibbs sampling to inference the hidden variables $z_n, n = 1, \ldots, N$. Define $f(t) = \frac{C_{z_t, p_t, *, *}^{-t} + \gamma_{p_t}^{(p)}}{\sum_{i=1}^{N_p}C_{z_t, i, *, *}^{-t} + \gamma_{i}^{(p)}} 
+ \times \frac{C_{z_t, *, m_t, *}^{-t} + \gamma_{m_t}^{(m)}}{\sum_{j=1}^{N_m}C_{z_t, *, j, *}^{-t} + \gamma_{j}^{(m)}} 
+\times \frac{C_{z_t, *, *, d_t}^{-t} + \gamma_{d_t}^{(d)}}{\sum_{k=1}^{N_d}C_{z_t, *, *, k}^{-t} + \gamma_{k}^{(d)}}$. The algorithm is shown below: 
+	
+	\begin{itemize}
+		\item[1.] Set $R = R_0$, where $R_0$ is the initial number of phenotypes; Randomly initialize $z$. 
+		\item[2.] Count the values $C_{(\cdot, \cdot, \cdot, \cdot)}$. 
+		\item[3.] For $t \in 1, 2, \ldots, N$
+			\begin{itemize}
+				\item[a)] Remove $S_t = (p_t, m_t, d_t)$ from data. Update $C_{(\cdot, \cdot, \cdot, \cdot)}$
+				\item[b)] If $S_t$ is the only instance in mixture $z_t$, then remove this mixture, and reduce $R$ by one. 
+				\item[c)] Draw $z_t$: 
+				\begin{align*}
+					p(z_t = r \leq R) \propto &  \frac{C_{z_t, *, *, *}^{-t}}{N + \alpha - 1} \times f(t) \\
+					p(z_t = R + 1) \propto & \frac{\alpha}{N + \alpha - 1} \times f(t)
+				\end{align*}
+			\end{itemize}
+		\item[4.] Update $R$ if $z_t = R + 1$. 
+		\item[5.] Update $C_{(\cdot, \cdot, \cdot, \cdot)}$ accordingly. 
+	\end{itemize}
+ 
+
+
 
 % An example of a floating figure using the graphicx package.
 % Note that \label must occur AFTER (or within) \caption.
