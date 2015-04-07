@@ -1,2 +1,6 @@
 **/.DS_Store
+**/.metadata
+**/.ipynb_checkpoints
+**/*.class
+code/npb_tensor/.*
 
