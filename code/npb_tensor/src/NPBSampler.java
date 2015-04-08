@@ -109,9 +109,11 @@ public class NPBSampler
 		z = new int[ts.numRecords];
 		
 		for (int k = 0; k < K; k++)
+		{
 			numPhenoPat.add(new int[ts.numPat]);
 			numPhenoMed.add(new int[ts.numMed]);
 			numPhenoDiag.add(new int[ts.numDiag]);
+		}
 		
 		for (int i = 0; i < z.length; ++i)
 		{
@@ -257,18 +259,38 @@ public class NPBSampler
 		initRandom();
 	}
 	
-	public static void main(String[] args) throws IOException {
-		TensorHolder ts = new TensorHolder(new FileInputStream("mimic2-triplets.txt"));
-		NPBSampler sampler = new NPBSampler(ts, 1);
-		sampler.run(200);
-		int k = 8;
-		PrintWriter writer = new PrintWriter("med-8.txt", "UTF-8");
-		Double base = sampler.gamma_p * ts.numMed + sampler.numPheno.get(k);
-		for (int i = 0; i < ts.numMed; ++i)
+	public static void printMedDistribution(NPBSampler sampler, Integer k) throws IOException
+	{
+		PrintWriter writer = new PrintWriter("med-" + k.toString() + ".txt", "UTF-8");
+		Double base = sampler.gamma_m * sampler.ts.numMed + sampler.numPheno.get(k);
+		for (int i = 0; i < sampler.ts.numMed; ++i)
 		{
-			Double prob = (sampler.gamma_p + sampler.numPhenoMed.get(k)[i]) / base; 
+			Double prob = (sampler.gamma_m + sampler.numPhenoMed.get(k)[i]) / base; 
 			writer.write(prob.toString() + "\n");
 		}
 		writer.close();
+	}
+	
+	public static void printDiagDistribution(NPBSampler sampler, Integer k) throws IOException
+	{
+		PrintWriter writer = new PrintWriter("diag-" + k.toString() + ".txt", "UTF-8");
+		Double base = sampler.gamma_d * sampler.ts.numDiag + sampler.numPheno.get(k);
+		for (int i = 0; i < sampler.ts.numDiag; ++i)
+		{
+			Double prob = (sampler.gamma_d + sampler.numPhenoDiag.get(k)[i] / base);
+			writer.write(prob.toString() + "\n");
+		}
+		writer.close();
+	}
+	
+	public static void main(String[] args) throws IOException {
+		TensorHolder ts = new TensorHolder(new FileInputStream("mimic2-triplets.txt"));
+		NPBSampler sampler = new NPBSampler(ts, 10);
+		sampler.run(1000);
+		for (int k = 0; k < sampler.K; ++k)
+			printMedDistribution(sampler, k);
+		
+		for (int k = 0; k < sampler.K; ++k)
+			printDiagDistribution(sampler, k);
 	}
 }
